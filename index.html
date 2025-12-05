@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>lycapei accounting</title>
+    <title>行動水彩記帳本</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
@@ -78,7 +78,7 @@
     <div id="app" class="w-full max-w-md app-card p-6 pt-0 flex flex-col min-h-[90vh]" style="background-image: var(--bg-input-gradient);">
         
         <header class="py-4 sticky top-0 bg-transparent backdrop-blur-sm z-10 mb-4 rounded-b-xl">
-            <h1 class="text-3xl font-bold text-gray-800 text-center">lycapei accounting</h1>
+            <h1 class="text-3xl font-bold text-gray-800 text-center">水彩記帳本</h1>
         </header>
 
         <nav class="flex mb-6 p-1 bg-gray-100 rounded-full shadow-inner">
@@ -90,7 +90,7 @@
             <button type="button" id="summaryTabBtn" onclick="switchTab('summary')" 
                     class="flex-1 py-2 flex items-center justify-center space-x-2 text-sm font-semibold rounded-full transition-all duration-300">
                 <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
-                <span>摘要</span>
+                <span>月/年摘要</span>
             </button>
         </nav>
 
@@ -317,15 +317,14 @@
     </div>
 
     <script>
-        // 🚨 必填：您的 Google Apps Script Web App 部署 URL
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzxCuRJ7VETqI8BTBO0OvjfsqOQ4kauymsDu-Gy_JLyrQa_tqKlYWmFRA7raYYeo4AS/exec'; 
+        // 🚨 必填：已替換為您提供的 Google Apps Script Web App 部署 URL
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJLzho0gNtTsf_RQmkhEK2Nu8bhVzCcWiY6N1ezEucTJzfL3S0L5Q74WNhSmWKUNId/exec'; 
         
         // ============== 全局狀態與配置 ==============
         let currentTab = 'input';
         let summaryViewType = 'month'; // 'month' or 'year'
         let isPendingStatus = false; // 預設為 實付/已扣款 (false)
         let currentTransactionType = 'expense'; // 交易類型狀態
-        let allTransactionsData = []; // 📢 新增：儲存從 Apps Script 讀取的所有交易資料
 
         // 交易類別選項
         const categoryOptions = {
@@ -349,7 +348,10 @@
             ]
         };
 
-        // ============== 輔助函式 ==============
+        // 模擬交易紀錄 (已刪除)
+        const mockData = []; // <--- 這裡已清空
+
+        // ============== 輔助函式 (保持不變) ==============
         
         /**
          * 切換主介面視圖 (輸入/摘要)
@@ -386,8 +388,7 @@
             } else {
                 summaryTabBtn.classList.add(...summaryActiveClasses.split(' '));
                 inputTabBtn.classList.add(...inactiveClasses.split(' '));
-                // 核心修正：進入摘要頁面時，載入並渲染
-                loadAndRenderSummary(); 
+                renderSummary(); // 進入摘要頁面時，強制渲染當前視圖
             }
             // 每次切換時重新渲染圖標
             if (typeof lucide !== 'undefined' && lucide.createIcons) {
@@ -586,11 +587,12 @@
         // ============== 1. 資料輸入與 API 邏輯 (使用 Fetch API) ==============
         
         /**
-         * 處理 Apps Script 成功響應的回調函式 (寫入)
+         * 處理 Apps Script 成功響應的回調函式
          * @param {Object} response - 從 Apps Script 的 doPost 返回的 JSON 物件 { status: 'success', message: ... }
+         * @param {Object} transaction - 原始提交的交易資料 (用於更新 mockData)
          * @param {Function} resetForm - 清空表單的函式
          */
-        function handleSuccess(response, resetForm) {
+        function handleSuccess(response, transaction, resetForm) {
             const submitBtn = document.getElementById('submitBtn');
             const originalText = submitBtn.dataset.originalText;
             document.getElementById('submitButtonText').textContent = originalText;
@@ -599,13 +601,15 @@
             // 檢查後端 Apps Script 返回的狀態
             if (response.status === 'success') {
                 showMessage(`🎉 ${response.message}`, 'success');
-                // 寫入成功後，清空表單
-                resetForm();
-
-                // 📢 寫入成功後，重新載入摘要數據以確保最新
-                if (currentTab === 'summary') {
-                    loadAndRenderSummary();
+                
+                // 成功寫入後，將交易加入本地 mockData 並清空表單
+                if (Array.isArray(transaction)) {
+                    transaction.forEach(t => mockData.push(t));
+                } else {
+                    mockData.push(transaction);
                 }
+                
+                resetForm();
 
             } else if (response.status === 'error') {
                 // Apps Script 內部邏輯錯誤 (例如找不到工作表等)
@@ -660,7 +664,7 @@
                 const data = await response.json(); // 解析 Apps Script 返回的 JSON 響應
 
                 if (data.status === 'success') {
-                    handleSuccess(data, resetForm);
+                    handleSuccess(data, transaction, resetForm);
                 } else {
                     handleError({ message: data.message });
                 }
@@ -800,72 +804,24 @@
             saveTransactionToSheet(transactionsToSave, resetFormAndState);
         });
 
-        // 📢 新增：從 Apps Script 讀取所有交易資料
-        /**
-         * 從 Apps Script 讀取所有交易資料
-         * @returns {Array} 交易資料陣列
-         */
-        async function fetchTransactions() {
-            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
-                console.error('請設置正確的 APPS_SCRIPT_URL!');
-                return [];
-            }
-            
-            // 呼叫 Apps Script 的 doGet 服務，加上 action=read 參數
-            const readUrl = `${APPS_SCRIPT_URL}?action=read`;
-            
-            // 顯示載入狀態
-            const summaryTitleElement = document.getElementById('summaryView').querySelector('h2');
-            const originalTitle = summaryTitleElement.textContent;
-            summaryTitleElement.textContent = '載入中... 請稍候 ⏳';
 
-            try {
-                const response = await fetch(readUrl, {
-                    method: 'GET',
-                    mode: 'cors'
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP 錯誤! 狀態碼: ${response.status}`);
-                }
-                
-                const data = await response.json();
-
-                if (data.status === 'success') {
-                    // 成功載入後，更新標題
-                    summaryTitleElement.textContent = originalTitle; 
-                    // 返回從 Google Sheet 讀取的交易資料
-                    return data.data; 
-                } else {
-                    showMessage(`❌ 載入錯誤: ${data.message}`, 'error');
-                    summaryTitleElement.textContent = '載入失敗 ❌';
-                    return [];
-                }
-                
-            } catch (error) {
-                showMessage(`❌ 連線或讀取失敗: ${error.message}`, 'error');
-                summaryTitleElement.textContent = '載入失敗 ❌';
-                return [];
-            }
-        }
-        
-        // 📢 新增：載入後端數據並渲染摘要頁面
-        /**
-         * 載入後端數據並渲染摘要頁面
-         */
-        async function loadAndRenderSummary() {
-            // 確保只在 summary 頁面執行
-            if (currentTab !== 'summary') return;
+        // 修正：使用 DOMContentLoaded 替代 window.onload，避免與 Lucide CDN 競爭
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            // 設置 timestamp 預設值為當前時間
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('timestamp').value = now.toISOString().slice(0, 16);
             
-            // 呼叫新增的讀取函式，將結果存入全局的 allTransactionsData 變數
-            const transactions = await fetchTransactions();
-            allTransactionsData = transactions; 
-            
-            // 渲染摘要頁面
-            renderSummary(); 
-        }
+            // 確保所有狀態初始化
+            switchTab('input'); 
+            setTransactionType('expense'); // 確保類別被填充
+            setPendingStatus(false); 
+            setSummaryView('month');
+            resetCurrencySelect(); 
+        });
 
-        // ============== 2. 摘要分析邏輯 (已修改資料源) ==============
+
+        // ============== 2. 摘要分析邏輯 (保持不變) ==============
 
         function setSummaryView(view) {
             summaryViewType = view;
@@ -886,7 +842,6 @@
                 yearBtn.classList.add(...activeClass.split(' '));
                 monthBtn.classList.add(...inactiveClass.split(' '));
             }
-            // 📢 使用已載入的全局數據進行渲染
             renderSummary(); 
             if (typeof lucide !== 'undefined' && lucide.createIcons) {
                 lucide.createIcons();
@@ -894,20 +849,6 @@
         }
 
         function renderSummary() {
-            // 📢 使用全局變數 allTransactionsData 作為數據源
-            const transactions = allTransactionsData; 
-            
-            // 如果沒有數據，快速退出並提示
-            if (!transactions || transactions.length === 0) {
-                document.getElementById('totalIncomeTWD').textContent = '0';
-                document.getElementById('totalExpenseTWD').textContent = '0';
-                document.getElementById('netFlowTWD').textContent = 'TWD 0';
-                document.getElementById('categorySummaryList').innerHTML = '<li class="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">此期間無實扣 TWD 支出紀錄</li>';
-                document.getElementById('accountSummaryList').innerHTML = '<li class="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">此期間無帳戶資金流動紀錄</li>';
-                document.getElementById('transactionDetailList').innerHTML = '<li class="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">此期間無實扣交易明細紀錄</li>';
-                return;
-            }
-
             // 獲取當前日期作為基準點 (用於篩選月/年)
             const now = new Date(); 
             const currentYear = now.getFullYear().toString();
@@ -919,11 +860,10 @@
             const currentPeriod = summaryViewType === 'month' ? currentMonthPeriod : currentYear;
 
             // 1. 過濾並計算當前期間的交易 (只計算已結算/非預授權)
-            const filteredData = transactions.filter(t => {
+            const filteredData = mockData.filter(t => {
                 // 排除預授權的支出
                 if (t.type === 'expense' && t.isPending) return false; 
                 
-                // 📢 注意：Apps Script 返回的 timestamp 可能是字串，需要轉換為 Date 物件
                 const date = new Date(t.timestamp);
                 
                 let transactionPeriod;
@@ -1020,7 +960,8 @@
                 accList.innerHTML = '<li class="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">此期間無帳戶資金流動紀錄</li>';
             } else {
                 sortedAccounts.forEach(([account, amount]) => {
-                    // 為了 UI 演示，我們從 filteredData 找到該帳戶最近一次使用的貨幣
+                    // 這裡沒有貨幣資訊，但為了簡單，先假設是 TWD
+                    // 為了 UI 演示，我們從 mockData 找到該帳戶最近一次使用的貨幣
                     const currency = filteredData.find(t => t.account === account)?.currency || 'TWD';
                     const isPositive = amount >= 0;
                     const colorClass = isPositive ? 'text-green-700' : 'text-red-700';
@@ -1116,20 +1057,6 @@
                 lucide.createIcons();
             }
         }
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            const now = new Date();
-            // 設置 timestamp 預設值為當前時間
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            document.getElementById('timestamp').value = now.toISOString().slice(0, 16);
-            
-            // 確保所有狀態初始化
-            switchTab('input'); 
-            setTransactionType('expense'); // 確保類別被填充
-            setPendingStatus(false); 
-            setSummaryView('month');
-            resetCurrencySelect(); 
-        });
     </script>
 </body>
 </html>

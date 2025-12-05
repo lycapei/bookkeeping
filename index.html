@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>行動水彩記帳本</title>
+    <title>錢錢紀錄</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
@@ -78,7 +78,7 @@
     <div id="app" class="w-full max-w-md app-card p-6 pt-0 flex flex-col min-h-[90vh]" style="background-image: var(--bg-input-gradient);">
         
         <header class="py-4 sticky top-0 bg-transparent backdrop-blur-sm z-10 mb-4 rounded-b-xl">
-            <h1 class="text-3xl font-bold text-gray-800 text-center">水彩記帳本</h1>
+            <h1 class="text-3xl font-bold text-gray-800 text-center">錢錢紀錄</h1>
         </header>
 
         <nav class="flex mb-6 p-1 bg-gray-100 rounded-full shadow-inner">
@@ -117,7 +117,7 @@
                 <div>
                     <label for="amount" class="block text-sm font-medium text-gray-700 mb-1 flex items-center space-x-2">
                         <i data-lucide="dollar-sign" class="w-4 h-4 text-gray-700"></i>
-                        <span>金額與貨幣</span>
+                        <span>金額</span>
                     </label>
                     <div class="flex space-x-3">
                         <div id="currencyInputContainer" class="w-1/3 relative">
@@ -149,15 +149,22 @@
                 <div id="singleAccountContainer">
                     <label for="account" id="singleAccountLabel" class="block text-sm font-medium text-gray-700 mb-1 flex items-center space-x-2">
                         <i data-lucide="wallet" class="w-4 h-4 text-gray-700"></i>
-                        <span>支付帳戶/類型</span>
+                        <span>支付帳戶</span>
                     </label>
                     <select id="account" name="account" class="input-field appearance-none">
                         <option value="">請選擇</option>
                         <option value="現金-台幣">現金 - 台幣</option>
-                        <option value="現金-外幣 USD">現金 - 外幣 USD</option>
-                        <option value="活存-中信台幣">活存 - 中信台幣</option>
-                        <option value="活存-玉山台幣">活存 - 玉山台幣</option>
-                        <option value="信用卡-Richart">信用卡 - Richart</option>
+                        <option value="活存 - 中信台幣">活存 - 中信台幣</option>
+                        <option value="活存 - Richart">活存 - Richart</option>
+                        <option value="活存 - 玉山台幣">活存 - 玉山台幣</option>
+                        <option value="玉山共帳 63467">玉山共帳 63467</option>
+                        <option value="活存 - 永豐金">活存 - 永豐金</option>
+                        <option value="活存 - 富邦">活存 - 富邦</option>
+                        <option value="信用卡 - 玉山">信用卡 - 玉山</option>
+                        <option value="信用卡 - Richart">信用卡 - Richart</option>
+                        <option value="信用卡 - 富邦">信用卡 - 富邦</option>
+                        <option value="悠遊卡 - Richart">悠遊卡 - Richart</option>
+                        <option value="悠遊卡 - 蛋黃哥">悠遊卡 - 蛋黃哥</option>
                         <option value="信用卡-玉山">信用卡 - 玉山</option>
                     </select>
                 </div>
@@ -170,12 +177,15 @@
                         </label>
                         <select id="sourceAccount" name="sourceAccount" class="input-field appearance-none">
                             <option value="">請選擇</option>
-                            <option value="現金-台幣">現金 - 台幣</option>
-                            <option value="現金-外幣 USD">現金 - 外幣 USD</option>
-                            <option value="活存-中信台幣">活存 - 中信台幣</option>
-                            <option value="活存-玉山台幣">活存 - 玉山台幣</option>
-                            <option value="信用卡-Richart">信用卡 - Richart</option>
-                            <option value="信用卡-玉山">信用卡 - 玉山</option>
+                            <option value="活存 - 中信台幣">活存 - 中信台幣</option>
+                            <option value="活存 - Richart">活存 - Richart</option>
+                            <option value="活存 - 玉山台幣">活存 - 玉山台幣</option>
+                            <option value="玉山共帳 63467">玉山共帳 63467</option>
+                            <option value="活存 - 永豐金">活存 - 永豐金</option>
+                            <option value="活存 - 富邦">活存 - 富邦</option>
+                            <option value="信用卡 - 玉山">信用卡 - 玉山</option>
+                            <option value="信用卡 - Richart">信用卡 - Richart</option>
+                            <option value="信用卡 - 富邦">信用卡 - 富邦</option>
                         </select>
                     </div>
                     <div>
@@ -185,12 +195,15 @@
                         </label>
                         <select id="destinationAccount" name="destinationAccount" class="input-field appearance-none">
                             <option value="">請選擇</option>
-                            <option value="現金-台幣">現金 - 台幣</option>
-                            <option value="現金-外幣 USD">現金 - 外幣 USD</option>
-                            <option value="活存-中信台幣">活存 - 中信台幣</option>
-                            <option value="活存-玉山台幣">活存 - 玉山台幣</option>
-                            <option value="信用卡-Richart">信用卡 - Richart</option>
-                            <option value="信用卡-玉山">信用卡 - 玉山</option>
+                            <option value="活存 - 中信台幣">活存 - 中信台幣</option>
+                            <option value="活存 - Richart">活存 - Richart</option>
+                            <option value="活存 - 玉山台幣">活存 - 玉山台幣</option>
+                            <option value="玉山共帳 63467">玉山共帳 63467</option>
+                            <option value="活存 - 永豐金">活存 - 永豐金</option>
+                            <option value="活存 - 富邦">活存 - 富邦</option>
+                            <option value="信用卡 - 玉山">信用卡 - 玉山</option>
+                            <option value="信用卡 - Richart">信用卡 - Richart</option>
+                            <option value="信用卡 - 富邦">信用卡 - 富邦</option>
                         </select>
                     </div>
                 </div>
@@ -198,7 +211,7 @@
                 <div id="categoryContainer">
                     <label for="category" id="categoryLabel" class="block text-sm font-medium text-gray-700 mb-1 flex items-center space-x-2">
                         <i data-lucide="tag" class="w-4 h-4 text-gray-700"></i>
-                        <span>類別 (食衣住行育樂)</span>
+                        <span>支出類別</span>
                     </label>
                     <select id="category" name="category" class="input-field appearance-none">
                         </select>
@@ -215,18 +228,18 @@
                 <div id="pendingStatusContainer" class="pt-2">
                     <label class="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
                         <i data-lucide="check-square" class="w-4 h-4 text-gray-700"></i>
-                        <span>支付狀態 (僅限支出)</span>
+                        <span>支付狀態</span>
                     </label>
                     <div class="flex p-1 bg-gray-100 rounded-full shadow-inner">
                         <button type="button" id="paidBtn" onclick="setPendingStatus(false)" 
                                 class="flex-1 py-2 flex items-center justify-center space-x-2 text-sm font-semibold rounded-full transition-all duration-300">
                             <i data-lucide="check-circle" class="w-4 h-4"></i>
-                            <span>實付/已扣款</span>
+                            <span>實付</span>
                         </button>
                         <button type="button" id="pendingBtn" onclick="setPendingStatus(true)" 
                                 class="flex-1 py-2 flex items-center justify-center space-x-2 text-sm font-semibold rounded-full transition-all duration-300">
                             <i data-lucide="clock" class="w-4 h-4"></i>
-                            <span>預授權 (非實扣)</span>
+                            <span>預授權</span>
                         </button>
                     </div>
                 </div>
@@ -234,7 +247,7 @@
                 <div>
                     <label for="description" class="block text-sm font-medium text-gray-700 mb-1 flex items-center space-x-2">
                         <i data-lucide="message-square" class="w-4 h-4 text-gray-700"></i>
-                        <span>備註/說明</span>
+                        <span>備註</span>
                     </label>
                     <input type="text" id="description" name="description" class="input-field">
                 </div>
@@ -318,7 +331,7 @@
 
     <script>
         // 🚨 必填：已替換為您提供的 Google Apps Script Web App 部署 URL
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJLzho0gNtTsf_RQmkhEK2Nu8bhVzCcWiY6N1ezEucTJzfL3S0L5Q74WNhSmWKUNId/exec'; 
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby8Ygenprhif_iyaTPcsH_8kGxMFTCELfNalZ3t0JJSnkmfTuNMNtr_yMSpvL9jS_2L/exec'; 
         
         // ============== 全局狀態與配置 ==============
         let currentTab = 'input';
@@ -329,27 +342,43 @@
         // 交易類別選項
         const categoryOptions = {
             expense: [
-                { value: '食', label: '食 (飲食)' },
-                { value: '衣', label: '衣 (服飾)' },
-                { value: '住', label: '住 (居家)' },
-                { value: '行', label: '行 (交通)' },
-                { value: '育', label: '育 (學習)' },
-                { value: '樂', label: '樂 (娛樂)' },
-                { value: '固定支出', label: '固定支出' },
-                { value: '投資', label: '投資/資產轉移' },
-                { value: '其他', label: '其他支出' },
+                { value: '食', label: '食' },
+                { value: '服飾', label: '服飾' },
+                { value: '美容', label: '美容' },
+                { value: '住', label: '住' },
+                { value: '行', label: '行' },
+                { value: '育', label: '育 ' },
+                { value: '樂', label: '樂 ' },
+                { value: '生活', label: '生活' },
+                { value: '孝親', label: '孝親' },
+                { value: '送禮', label: '送禮' },
+                { value: '冠', label: '冠' },
+                { value: '軒', label: '軒' },
+                { value: '稅金', label: '稅金' },
+                { value: '代墊', label: '代墊' },
             ],
             income: [
                 { value: '薪資', label: '薪資' },
-                { value: '利息/股利', label: '利息/股利收入' },
-                { value: '獎金', label: '獎金/補助' },
-                { value: '他人轉帳', label: '他人轉帳/禮物' },
-                { value: '其他', label: '其他收入' },
+                { value: '利息/股利', label: '利息/股利' },
+                { value: '他人轉帳', label: '他人轉帳' },
+                { value: '其他收入', label: '其他收入' },
             ]
         };
 
-        // 模擬交易紀錄 (已刪除)
-        const mockData = []; // <--- 這裡已清空
+        // 模擬交易紀錄 (用於讀取/摘要計算，直到我們實作遠端讀取功能)
+        const mockData = [
+            // 假設當前年份是 2025
+            { type: 'expense', amount: -500, currency: 'TWD', account: '活存-中信台幣', timestamp: '2025-12-04T10:00:00.000Z', category: '食', description: '午餐', isPending: false },
+            { type: 'expense', amount: -2500, currency: 'TWD', account: '信用卡-Richart', timestamp: '2025-12-03T15:30:00.000Z', category: '衣', description: '新衣服', isPending: false },
+            { type: 'income', amount: 30000, currency: 'TWD', account: '活存-中信台幣', timestamp: '2025-12-01T09:00:00.000Z', category: '薪資', description: '當月薪資', isPending: false },
+            { type: 'expense', amount: -1500, currency: 'TWD', account: '活存-玉山台幣', timestamp: '2025-11-20T19:45:00.000Z', category: '樂', description: '電影票', isPending: false },
+            { type: 'expense', amount: -1000, currency: 'TWD', account: '信用卡-Richart', timestamp: '2025-12-05T08:00:00.000Z', category: '住', description: '待扣款房租', isPending: true },
+            { type: 'expense', amount: -10, currency: 'USD', account: '現金-外幣 USD', timestamp: '2025-12-05T12:00:00.000Z', category: '食', description: '國外網站服務費', isPending: false },
+            { type: 'expense', amount: -5000, currency: 'TWD', account: '活存-中信台幣', timestamp: '2024-12-10T11:00:00.000Z', category: '住', description: '年繳保險費', isPending: false },
+            { type: 'transfer_out', amount: -1000, currency: 'TWD', account: '活存-玉山台幣', timestamp: '2025-12-02T16:00:00.000Z', category: '轉帳', description: '轉入中信', isPending: false, relatedAccount: '活存-中信台幣' },
+            { type: 'transfer_in', amount: 1000, currency: 'TWD', account: '活存-中信台幣', timestamp: '2025-12-02T16:00:00.000Z', category: '轉帳', description: '從玉山轉入', isPending: false, relatedAccount: '活存-玉山台幣' },
+        ];
+
 
         // ============== 輔助函式 (保持不變) ==============
         
@@ -554,8 +583,8 @@
                     categoryContainer.classList.remove('hidden');
                     pendingStatusContainer.classList.add('hidden');
 
-                    singleAccountLabel.querySelector('span').textContent = '存入帳戶/類型 (收入)';
-                    categoryLabel.textContent = '收入來源/類別';
+                    singleAccountLabel.querySelector('span').textContent = '存入帳戶';
+                    categoryLabel.textContent = '收入來源';
                     submitButtonText.textContent = '儲存收入紀錄';
 
                     // 填充收入類別選項
@@ -818,6 +847,9 @@
             setPendingStatus(false); 
             setSummaryView('month');
             resetCurrencySelect(); 
+            
+            // 由於 Lucide CDN 會自動嘗試渲染，這裡不再強制呼叫 createIcons()。
+            // 只需要確保 setTransactionType 被呼叫，它會負責填充類別。
         });
 
 

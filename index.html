@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>lycapei accounting</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        /* 柔和水彩色調定義 */
+        :root {
+            /* Input Page 主題色 (Pink) */
+            --color-input-active: #EC4899; /* Pink */
+            /* Summary Page 主題色 (Blue) */
+            --color-summary-active: #3B82F6; /* Blue */
+            
+            /* 背景 */
+            --bg-body: #F0F8FF; /* Very light, soft blue */
+            
+            /* Tab 顏色：粉色系水彩 (Input) */
+            --bg-input-gradient: linear-gradient(135deg, #FFFAFD, #FFEAEF); 
+            /* Tab 顏色：藍色系水彩 (Summary) */
+            --bg-summary-gradient: linear-gradient(135deg, #F9FFFF, #EEF7FF); 
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+        }
+        .app-card {
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08);
+            transition: background-image 0.5s ease;
+        }
+        .input-field {
+            /* 統一設定白底、邊框與圓角 */
+            background-color: #FFFFFF; 
+            border: 1px solid #E5E7EB;
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            width: 100%; /* 確保寬度一致 */
+            transition: all 0.2s ease;
+            height: 3rem; 
+            box-sizing: border-box; /* 確保 padding/border 不增加總高度 */
+            /* 確保 type=date/time/datetime-local 不會被瀏覽器添加額外的右邊距 */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        .input-field:focus {
+            border-color: var(--color-input-active);
+            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+        }
+        /* 調整輸入框的內距，確保它們的高度與 select 對齊 */
+        #amount, #currencyInput, #timestamp {
+             padding-top: 0.75rem; 
+             padding-bottom: 0.75rem;
+        }
+    </style>
+    <script>
+        // 設定 Tailwind CSS 配置
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'soft-pink': '#FFECF8',
+                        'soft-blue': '#E0F2FE',
+                        // 新增用於訊息的顏色
+                        'soft-green': '#D1FAE5',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen p-4 flex flex-col items-center">
+
+    <div id="app" class="w-full max-w-md app-card p-6 pt-0 flex flex-col min-h-[90vh]" style="background-image: var(--bg-input-gradient);">
+        
+        <header class="py-4 sticky top-0 bg-transparent backdrop-blur-sm z-10 mb-4 rounded-b-xl">
+            <h1 class="text-3xl font-bold text-gray-800 text-center">lycapei accounting</h1>
+        </header>
+
+        <nav class="flex mb-6 p-1 bg-gray-100 rounded-full shadow-inner">
+            <button type="button" id="inputTabBtn" onclick="switchTab('input')" 
+                    class="flex-1 py-2 flex items-center justify-center space-x-2 text-sm font-semibold rounded-full transition-all duration-300">
+                <i data-lucide="pencil-line" class="w-4 h-4"></i>
+                <span>資料輸入</span>
+            </button>
+            <button type="button" id="summaryTabBtn" onclick="switchTab('summary')" 
+                    class="flex-1 py-2 flex items-center justify-center space-x-2 text-sm font-semibold rounded-full transition-all duration-300">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                <span>摘要</span>
+            </button>
+        </nav>
+
+        <div id="inputView" class="tab-content flex-grow">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">新增交易紀錄</h2>
+            
+            <div id="transactionTypeSwitch" class="flex mb-6 p-1 bg-gray-100 rounded-full shadow-inner">
+                <button type="button" data-type="expense" onclick="setTransactionType('expense')" 
+                        class="flex-1 py-2 text-xs font-semibold rounded-full transition-all duration-300 text-gray-600">
+                    <i data-lucide="minus-circle" class="w-4 h-4 inline mr-1"></i> 支出
+                </button>
+                <button type="button" data-type="income" onclick="setTransactionType('income')" 
+                        class="flex-1 py-2 text-xs font-semibold rounded-full transition-all duration-300 text-gray-600">
+                    <i data-lucide="plus-circle" class="w-4 h-4 inline mr-1"></i> 收入
+                </button>
+                <button type="button" data-type="transfer" onclick="setTransactionType('transfer')" 
+                        class="flex-1 py-2 text-xs font-semibold rounded-full transition-all duration-300 text-gray-600">
+                    <i data-lucide="arrow-right-left" class="w-4 h-4 inline mr-1"></i> 轉帳
+                </button>
+            </div>
+            
+            <form id="transactionForm" class="space-y-4">
+                
+                <div>
+                    <label for="amount" class="block text-sm font-medium text-gray-700 mb-1 flex items-center space-x-2">
+                        <i data-lucide="dollar-sign" class="w-4 h-4 text-gray-700"></i>
+                        <span>金額與貨幣</span>
+                    </label>
+                    <div class="flex space-x-3">
+                        <div id="currencyInputContainer" class="w-1/3 relative">
+                            <select id="currencySelect" name="currencySelect" onchange="handleCurrencyChange(this.value)" 
+                                class="input-field appearance-none px-2 text-center text-sm font-semibold text-pink-700">
+                                <option value="TWD" selected>TWD</option>
+                                <option value="USD">USD</option>
+                                <option value="JPY">JPY</option>
+                                <option value="Other">其他</option>
+                            </select>
+                            
+                            <div id="manualCurrencyContainer" class="absolute inset-0 hidden">
+                                <input type="text" id="currencyInput" name="currencyInput" 
+                                    class="input-field appearance-none px-2 text-center text-sm font-semibold text-pink-700 pr-8" 
+                                    placeholder="代碼 (EUR)" maxlength="5">
+                                <button type="button" onclick="resetCurrencySelect()" 
+                                        class="absolute right-0 top-1/2 transform -translate-y-1/2 mr-1 h-8 w-8 flex items-center justify-center text-gray-400 hover:text-pink-600 transition-colors focus:outline-none">
+                                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="w-2/3">
+                            <input type="number" id="amount" name="amount" required class="input-field text-lg font-bold text-pink-700" placeholder="0.00">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="singleAccountContainer">
+                    <label for="account" id="singleAccountLabel" class="block text-sm font-medium text-gray-700 mb-1 flex items-center space-x-2">
+                        <i data-lucide="wallet" class="w-4 h-4 text-gray-700"></i>
+                        <span>支付帳戶/類型</span>
+                    </label>
+                    <select id="account" name="account" class="input-field appearance-none">
+                        <option value="">請選擇</option>
+                        <option value="現金-台幣">現金 - 台幣</option>
+                        <option value="現金-外幣 USD">現金 - 外幣 USD</option>
+                        <option value="活存-中信台幣">活存 - 中信台幣</option>
+                        <option value="活存-玉山台幣">活存 - 玉山台幣</option>
+                        <option value="信用卡-Richart">信用卡 - Richart</option>
+                        <option value="信用卡-玉山">信用卡 - 玉山</option>
+                    </select>
+                </div>
+                
+                <div id="transferAccountContainer" class="hidden space-y-4">
+                    <div>
+                        <label for="sourceAccount" class="block text-sm font-medium text-gray-700 mb-1 flex items-center space-x-2">
+                            <i data-lucide="arrow-up-right-from-circle" class="w-4 h-4 text-gray-700"></i>
+                            <span>轉出帳戶 (Source)</span>
+                        </label>
+                        <select id="sourceAccount" name="sourceAccount" class="input-field appearance-none">
+                            <option value="">請選擇</option>
+                            <option value="現金-台幣">現金 - 台幣</option>
+                            <option value="現金-外幣 USD">現金 - 外幣 USD</option>
+                            <option value="活存-中信台幣">活存 - 中信台幣</option>
+                            <option value="活存-玉山台幣">活存 - 玉山台幣</option>
+                            <option value="信用卡-Richart">信用卡 - Richart</option>
+                            <option value="信用卡-玉山">信用卡 - 玉山</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="destinationAccount" class="block text-sm font-medium text-gray-700 mb-1 flex items-center space-x-2">
+                            <i data-lucide="arrow-down-left-from-circle" class="w-4 h-4 text-gray-700"></i>
+                            <span>轉入帳戶 (Destination)</span>
+                        </label>
+                        <select id="destinationAccount" name="destinationAccount" class="input-field appearance-none">
+                            <option value="">請選擇</option>
+                            <option value="現金-台幣">現金 - 台幣</option>
+                            <option value="現金-外幣 USD">現金 - 外幣 USD</option>
+                            <option value="活存-中信台幣">活存 - 中信台幣</option>
+                            <option value="活存-玉山台幣">活存 - 玉山台幣</option>
+                            <option value="信用卡-Richart">信用卡 - Richart</option>
+                            <option value="信用卡-玉山">信用卡 - 玉山</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="categoryContainer">
+                    <label for="category" id="categoryLabel" class="block text-sm font-medium text-gray-700 mb-1 flex items-center space-x-2">
+                        <i data-lucide="tag" class="w-4 h-4 text-gray-700"></i>
+                        <span>類別 (食衣住行育樂)</span>
+                    </label>
+                    <select id="category" name="category" class="input-field appearance-none">
+                        </select>
+                </div>
+
+                <div>
+                    <label for="timestamp" class="block text-sm font-medium text-gray-700 mb-1 flex items-center space-x-2">
+                        <i data-lucide="calendar" class="w-4 h-4 text-gray-700"></i>
+                        <span>日期與時間</span>
+                    </label>
+                    <input type="datetime-local" id="timestamp" name="timestamp" required class="input-field appearance-none">
+                </div>
+                
+                <div id="pendingStatusContainer" class="pt-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2 flex items-center space-x-2">
+                        <i data-lucide="check-square" class="w-4 h-4 text-gray-700"></i>
+                        <span>支付狀態 (僅限支出)</span>
+                    </label>
+                    <div class="flex p-1 bg-gray-100 rounded-full shadow-inner">
+                        <button type="button" id="paidBtn" onclick="setPendingStatus(false)" 
+                                class="flex-1 py-2 flex items-center justify-center space-x-2 text-sm font-semibold rounded-full transition-all duration-300">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                            <span>實付/已扣款</span>
+                        </button>
+                        <button type="button" id="pendingBtn" onclick="setPendingStatus(true)" 
+                                class="flex-1 py-2 flex items-center justify-center space-x-2 text-sm font-semibold rounded-full transition-all duration-300">
+                            <i data-lucide="clock" class="w-4 h-4"></i>
+                            <span>預授權 (非實扣)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1 flex items-center space-x-2">
+                        <i data-lucide="message-square" class="w-4 h-4 text-gray-700"></i>
+                        <span>備註/說明</span>
+                    </label>
+                    <input type="text" id="description" name="description" class="input-field">
+                </div>
+
+
+                <button type="submit" id="submitBtn" class="w-full py-3 mt-6 flex items-center justify-center space-x-2 text-lg font-bold text-white bg-pink-600 hover:bg-pink-700 rounded-xl transition-transform transform hover:scale-[1.01] shadow-lg shadow-pink-300">
+                    <i data-lucide="save" class="w-5 h-5"></i>
+                    <span id="submitButtonText">儲存支出紀錄</span>
+                </button>
+            </form>
+
+            <div id="messageBox" class="mt-4 p-3 hidden rounded-xl text-center font-medium"></div>
+        </div>
+
+        <div id="summaryView" class="tab-content hidden flex-grow">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">支出摘要分析</h2>
+            
+            <div class="flex mb-4 p-1 bg-gray-100 rounded-full shadow-inner">
+                <button type="button" id="viewToggleMonth" onclick="setSummaryView('month')" class="flex-1 py-2 text-xs font-semibold rounded-full transition-all duration-300">
+                    <i data-lucide="calendar-check" class="w-4 h-4 inline mr-1"></i> 月度摘要
+                </button>
+                <button type="button" id="viewToggleYear" onclick="setSummaryView('year')" class="flex-1 py-2 text-xs font-semibold rounded-full transition-all duration-300 text-gray-600">
+                    <i data-lucide="calendar" class="w-4 h-4 inline mr-1"></i> 年度摘要
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                
+                <div class="app-card p-4 bg-soft-blue/50 text-center">
+                    <p class="text-sm font-medium text-gray-700" id="summaryPeriodText">2025年12月 總結 (包含收入)</p>
+                    <div class="flex justify-around items-center mt-2">
+                        <div>
+                             <p class="text-xs text-gray-500">總收入 (TWD)</p>
+                             <p class="text-2xl font-bold text-green-600" id="totalIncomeTWD">0</p>
+                        </div>
+                        <div>
+                             <p class="text-xs text-gray-500">總支出 (TWD)</p>
+                             <p class="text-2xl font-bold text-red-600" id="totalExpenseTWD">0</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-blue-200">
+                        <p class="text-sm font-medium text-gray-700">淨額 (TWD)</p>
+                        <p class="text-3xl font-extrabold" id="netFlowTWD">TWD 0</p>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">注意：多幣別金額未換算合計</p>
+                </div>
+
+
+                <div class="app-card p-4 bg-white">
+                    <h3 class="text-lg font-semibold border-b pb-2 mb-3 text-gray-700 flex items-center space-x-2">
+                        <i data-lucide="tag" class="w-5 h-5 text-blue-500"></i>
+                        <span>按類別總花費 (TWD)</span>
+                    </h3>
+                    <ul id="categorySummaryList" class="space-y-3">
+                        <li class="flex justify-between items-center text-gray-500">
+                            <span>請先輸入交易資料</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="app-card p-4 bg-white">
+                    <h3 class="text-lg font-semibold border-b pb-2 mb-3 text-gray-700 flex items-center space-x-2">
+                        <i data-lucide="wallet" class="w-5 h-5 text-blue-500"></i>
+                        <span>按支付帳戶總淨額</span>
+                    </h3>
+                    <ul id="accountSummaryList" class="space-y-3">
+                        </ul>
+                </div>
+
+                <div class="app-card p-4 bg-white">
+                    <h3 class="text-lg font-semibold border-b pb-2 mb-3 text-gray-700 flex items-center space-x-2">
+                        <i data-lucide="list-checks" class="w-5 h-5 text-blue-500"></i>
+                        <span>區間交易明細</span>
+                    </h3>
+                    <ul id="transactionDetailList" class="space-y-2">
+                        </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🚨 必填：您的 Google Apps Script Web App 部署 URL
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUmKHMMQ_22rg-rk8i0vJnMjR5L9gpppvx0jI9yG6PVffZjJ84HmPOt_O_5uN8tRWA/exec'; 
+        
+        // ============== 全局狀態與配置 ==============
+        let currentTab = 'input';
+        let summaryViewType = 'month'; // 'month' or 'year'
+        let isPendingStatus = false; // 預設為 實付/已扣款 (false)
+        let currentTransactionType = 'expense'; // 交易類型狀態
+        let allTransactionsData = []; // 📢 新增：儲存從 Apps Script 讀取的所有交易資料
+
+        // 交易類別選項
+        const categoryOptions = {
+            expense: [
+                { value: '食', label: '食 (飲食)' },
+                { value: '衣', label: '衣 (服飾)' },
+                { value: '住', label: '住 (居家)' },
+                { value: '行', label: '行 (交通)' },
+                { value: '育', label: '育 (學習)' },
+                { value: '樂', label: '樂 (娛樂)' },
+                { value: '固定支出', label: '固定支出' },
+                { value: '投資', label: '投資/資產轉移' },
+                { value: '其他', label: '其他支出' },
+            ],
+            income: [
+                { value: '薪資', label: '薪資' },
+                { value: '利息/股利', label: '利息/股利收入' },
+                { value: '獎金', label: '獎金/補助' },
+                { value: '他人轉帳', label: '他人轉帳/禮物' },
+                { value: '其他', label: '其他收入' },
+            ]
+        };
+
+        // ============== 輔助函式 ==============
+        
+        /**
+         * 切換主介面視圖 (輸入/摘要)
+         * @param {string} tabName - 'input' or 'summary'
+         */
+        function switchTab(tabName) {
+            currentTab = tabName;
+            const app = document.getElementById('app');
+            const inputView = document.getElementById('inputView');
+            const summaryView = document.getElementById('summaryView');
+            const inputTabBtn = document.getElementById('inputTabBtn');
+            const summaryTabBtn = document.getElementById('summaryTabBtn');
+            
+            // 樣式配置
+            const inputActiveClasses = 'bg-pink-500 text-white shadow-lg';
+            const summaryActiveClasses = 'bg-blue-500 text-white shadow-lg';
+            const inactiveClasses = 'text-gray-600 bg-gray-50'; 
+
+            // 1. 介面內容切換
+            inputView.classList.toggle('hidden', tabName !== 'input');
+            summaryView.classList.toggle('hidden', tabName !== 'summary');
+            
+            // 2. 主卡片背景切換
+            app.style.backgroundImage = tabName === 'input' ? 'var(--bg-input-gradient)' : 'var(--bg-summary-gradient)';
+
+            // 3. 導航按鈕樣式切換
+            [inputTabBtn, summaryTabBtn].forEach(btn => {
+                btn.classList.remove(...inputActiveClasses.split(' '), ...summaryActiveClasses.split(' '), ...inactiveClasses.split(' '));
+            });
+
+            if (tabName === 'input') {
+                inputTabBtn.classList.add(...inputActiveClasses.split(' '));
+                summaryTabBtn.classList.add(...inactiveClasses.split(' '));
+            } else {
+                summaryTabBtn.classList.add(...summaryActiveClasses.split(' '));
+                inputTabBtn.classList.add(...inactiveClasses.split(' '));
+                // 核心修正：進入摘要頁面時，載入並渲染
+                loadAndRenderSummary(); 
+            }
+            // 每次切換時重新渲染圖標
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        }
+
+        /**
+         * 格式化金額，前面帶上貨幣代碼
+         * @param {number} amount 
+         * @param {string} currency 
+         * @returns {string}
+         */
+        function formatCurrencyDisplay(amount, currency, isNegative = false) {
+            const displayAmount = Math.round(Math.abs(amount)).toLocaleString('zh-TW');
+            const sign = isNegative ? '-' : '';
+            return `${sign}${currency} ${displayAmount}`;
+        }
+
+        /**
+         * 顯示/隱藏訊息方塊
+         * @param {string} message 
+         * @param {string} type 'success' or 'error'
+         */
+        function showMessage(message, type) {
+            const box = document.getElementById('messageBox');
+            box.textContent = message;
+            box.classList.remove('hidden', 'bg-soft-pink/80', 'text-red-700', 'bg-soft-green/80', 'text-green-700');
+            box.classList.add(type === 'success' ? 'bg-soft-green/80' : 'bg-soft-pink/80', type === 'success' ? 'text-green-700' : 'text-red-700');
+            
+            setTimeout(() => {
+                box.classList.add('hidden');
+            }, 5000);
+        }
+
+        /**
+         * 處理貨幣選擇變化，切換 Select 和 Manual Input Container
+         * @param {string} value 
+         */
+        function handleCurrencyChange(value) {
+            const select = document.getElementById('currencySelect');
+            const manualContainer = document.getElementById('manualCurrencyContainer');
+            
+            if (value === 'Other') {
+                select.classList.add('hidden');
+                manualContainer.classList.remove('hidden');
+                document.getElementById('currencyInput').focus();
+            } else {
+                select.classList.remove('hidden');
+                manualContainer.classList.add('hidden');
+            }
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        }
+
+        /**
+         * 從手動輸入切換回下拉式選單
+         */
+        function resetCurrencySelect() {
+            const select = document.getElementById('currencySelect');
+            const manualContainer = document.getElementById('manualCurrencyContainer');
+            
+            manualContainer.classList.add('hidden');
+            select.classList.remove('hidden');
+            select.value = 'TWD';
+            document.getElementById('currencyInput').value = ''; 
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        }
+        
+        /**
+         * 處理支付狀態切換 (實付/預授權)
+         * @param {boolean} isPending - true: 預授權, false: 實付
+         */
+        function setPendingStatus(isPending) {
+            isPendingStatus = isPending;
+            const paidBtn = document.getElementById('paidBtn');
+            const pendingBtn = document.getElementById('pendingBtn');
+
+            const activeClass = 'bg-pink-500 text-white shadow-md'; 
+            const inactiveClass = 'text-gray-600 bg-gray-50'; 
+
+            paidBtn.classList.remove(...activeClass.split(' '), ...inactiveClass.split(' '));
+            pendingBtn.classList.remove(...activeClass.split(' '), ...inactiveClass.split(' '));
+
+            if (!isPending) {
+                paidBtn.classList.add(...activeClass.split(' '));
+                pendingBtn.classList.add(...inactiveClass.split(' '));
+            } else {
+                pendingBtn.classList.add(...activeClass.split(' '));
+                paidBtn.classList.add(...inactiveClass.split(' '));
+            }
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        }
+        
+        /**
+         * 根據選擇的類型，調整表單 UI
+         * @param {string} type - 'expense', 'income', 'transfer'
+         */
+        function setTransactionType(type) {
+            currentTransactionType = type;
+            const allBtns = document.querySelectorAll('#transactionTypeSwitch button');
+            const activeClass = 'bg-pink-500 text-white shadow-md'; 
+            const inactiveClass = 'text-gray-600 bg-gray-50'; // 確保 inactive 也有背景色
+
+            // 1. 按鈕樣式
+            allBtns.forEach(btn => {
+                // 移除所有可能的樣式，確保切換乾淨
+                btn.classList.remove(...activeClass.split(' '), ...inactiveClass.split(' ')); 
+                if (btn.getAttribute('data-type') === type) {
+                    btn.classList.add(...activeClass.split(' '));
+                } else {
+                    btn.classList.add(...inactiveClass.split(' ')); // 使用 inactiveClass
+                }
+            });
+
+            // 2. 表單欄位調整
+            const singleAccountContainer = document.getElementById('singleAccountContainer');
+            const transferAccountContainer = document.getElementById('transferAccountContainer');
+            const categoryContainer = document.getElementById('categoryContainer');
+            const singleAccountLabel = document.getElementById('singleAccountLabel');
+            const categorySelect = document.getElementById('category');
+            const categoryLabel = document.getElementById('categoryLabel').querySelector('span');
+            const pendingStatusContainer = document.getElementById('pendingStatusContainer');
+            const submitButtonText = document.getElementById('submitButtonText');
+            
+            // 清空類別選項
+            categorySelect.innerHTML = '<option value="">請選擇</option>'; 
+            
+            // 重設必填屬性
+            document.getElementById('account').required = false;
+            document.getElementById('sourceAccount').required = false;
+            document.getElementById('destinationAccount').required = false;
+            document.getElementById('category').required = false;
+
+            switch (type) {
+                case 'expense':
+                    // 顯示單一帳戶 (支付)，顯示類別 (支出)，顯示狀態
+                    singleAccountContainer.classList.remove('hidden');
+                    transferAccountContainer.classList.add('hidden');
+                    categoryContainer.classList.remove('hidden');
+                    pendingStatusContainer.classList.remove('hidden');
+
+                    singleAccountLabel.querySelector('span').textContent = '支付帳戶/類型';
+                    categoryLabel.textContent = '類別 (食衣住行育樂)';
+                    submitButtonText.textContent = '儲存支出紀錄';
+                    
+                    // 填充支出類別選項
+                    categoryOptions.expense.forEach(opt => categorySelect.innerHTML += `<option value="${opt.value}">${opt.label}</option>`);
+                    
+                    document.getElementById('account').required = true;
+                    document.getElementById('category').required = true;
+                    break;
+
+                case 'income':
+                    // 顯示單一帳戶 (存入)，顯示類別 (收入)，隱藏狀態
+                    singleAccountContainer.classList.remove('hidden');
+                    transferAccountContainer.classList.add('hidden');
+                    categoryContainer.classList.remove('hidden');
+                    pendingStatusContainer.classList.add('hidden');
+
+                    singleAccountLabel.querySelector('span').textContent = '存入帳戶/類型 (收入)';
+                    categoryLabel.textContent = '收入來源/類別';
+                    submitButtonText.textContent = '儲存收入紀錄';
+
+                    // 填充收入類別選項
+                    categoryOptions.income.forEach(opt => categorySelect.innerHTML += `<option value="${opt.value}">${opt.label}</option>`);
+                    
+                    document.getElementById('account').required = true;
+                    document.getElementById('category').required = true;
+                    break;
+
+                case 'transfer':
+                    // 隱藏單一帳戶，顯示雙帳戶 (轉出/轉入)，隱藏類別，隱藏狀態
+                    singleAccountContainer.classList.add('hidden');
+                    transferAccountContainer.classList.remove('hidden');
+                    categoryContainer.classList.add('hidden');
+                    pendingStatusContainer.classList.add('hidden');
+
+                    submitButtonText.textContent = '儲存轉帳紀錄';
+                    
+                    document.getElementById('sourceAccount').required = true;
+                    document.getElementById('destinationAccount').required = true;
+                    break;
+            }
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons(); // 重新渲染圖標
+            }
+        }
+
+
+        // ============== 1. 資料輸入與 API 邏輯 (使用 Fetch API) ==============
+        
+        /**
+         * 處理 Apps Script 成功響應的回調函式 (寫入)
+         * @param {Object} response - 從 Apps Script 的 doPost 返回的 JSON 物件 { status: 'success', message: ... }
+         * @param {Function} resetForm - 清空表單的函式
+         */
+        function handleSuccess(response, resetForm) {
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.dataset.originalText;
+            document.getElementById('submitButtonText').textContent = originalText;
+            submitBtn.disabled = false;
+
+            // 檢查後端 Apps Script 返回的狀態
+            if (response.status === 'success') {
+                showMessage(`🎉 ${response.message}`, 'success');
+                // 寫入成功後，清空表單
+                resetForm();
+
+                // 📢 寫入成功後，重新載入摘要數據以確保最新
+                if (currentTab === 'summary') {
+                    loadAndRenderSummary();
+                }
+
+            } else if (response.status === 'error') {
+                // Apps Script 內部邏輯錯誤 (例如找不到工作表等)
+                showMessage(`❌ 伺服器錯誤: ${response.message}`, 'error');
+            } else {
+                // 意外的響應格式
+                showMessage('⚠️ Apps Script 返回未知格式的響應。', 'error');
+            }
+        }
+
+        /**
+         * 處理 Apps Script 失敗響應的回調函式
+         * @param {Error} error - Fetch 或 Apps Script 執行環境拋出的異常
+         */
+        function handleError(error) {
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.dataset.originalText;
+            document.getElementById('submitButtonText').textContent = originalText;
+            submitBtn.disabled = false;
+
+            showMessage(`❌ 連線失敗或部署錯誤: ${error.message}`, 'error');
+        }
+
+
+        /**
+         * 將單筆交易資料發送到 Apps Script 進行儲存 (使用標準 Fetch API)
+         * @param {object|array} transaction 交易資料或交易陣列
+         * @param {Function} resetForm 成功後用來重設表單的函式
+         */
+        async function saveTransactionToSheet(transaction, resetForm) {
+            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
+                handleError({ message: '請在 HTML 程式碼中設置正確的 APPS_SCRIPT_URL!' });
+                return;
+            }
+
+            try {
+                // 關鍵修正：Content-Type 設置為 text/plain 以避免 CORS 預檢
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'cors', 
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8' 
+                    },
+                    // 將交易物件包裹成 JSON 字串發送
+                    body: JSON.stringify({ transaction: transaction }) 
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP 錯誤! 狀態碼: ${response.status}`);
+                }
+                
+                const data = await response.json(); // 解析 Apps Script 返回的 JSON 響應
+
+                if (data.status === 'success') {
+                    handleSuccess(data, resetForm);
+                } else {
+                    handleError({ message: data.message });
+                }
+
+            } catch (error) {
+                // 捕獲網路錯誤或 JSON 解析錯誤
+                handleError({ message: `連線或處理失敗: ${error.message}` });
+            }
+        }
+
+
+        document.getElementById('transactionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = this;
+            const formData = new FormData(form);
+            const currencySelectValue = document.getElementById('currencySelect').value;
+            let currencyCode;
+            
+            // 貨幣代碼檢查
+            if (currencySelectValue === 'Other') {
+                 currencyCode = document.getElementById('currencyInput').value.toUpperCase().trim();
+                 if (!currencyCode) {
+                     showMessage('請輸入有效的貨幣代碼！', 'error');
+                     return;
+                 }
+            } else {
+                currencyCode = currencySelectValue;
+            }
+
+            const baseAmount = parseFloat(formData.get('amount'));
+            if (isNaN(baseAmount) || baseAmount <= 0) {
+                showMessage('金額輸入無效！', 'error');
+                return;
+            }
+            
+            const timestamp = new Date(formData.get('timestamp')).toISOString();
+            const description = formData.get('description') || '';
+            const pendingStatus = isPendingStatus;
+
+            let transactionsToSave = [];
+            let successMessage = '';
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.dataset.originalText = document.getElementById('submitButtonText').textContent; // 儲存原始文字
+            
+            document.getElementById('submitButtonText').textContent = '傳輸與驗證中...';
+            submitBtn.disabled = true;
+
+            // 根據交易類型處理
+            if (currentTransactionType === 'expense' || currentTransactionType === 'income') {
+                const type = currentTransactionType;
+                const account = formData.get('account');
+                const category = formData.get('category');
+
+                if (!account || !category) {
+                     showMessage('請選擇帳戶和類別！', 'error');
+                     submitBtn.disabled = false;
+                     document.getElementById('submitButtonText').textContent = submitBtn.dataset.originalText;
+                     return;
+                }
+
+                transactionsToSave.push({
+                    type: type, 
+                    amount: type === 'expense' ? -baseAmount : baseAmount, 
+                    currency: currencyCode,
+                    account: account,
+                    timestamp: timestamp,
+                    category: category,
+                    description: description,
+                    isPending: type === 'expense' ? pendingStatus : false, 
+                });
+                
+                successMessage = `資料傳輸中: ${type === 'income' ? '收入' : '支出'} ${formatCurrencyDisplay(baseAmount, currencyCode)}`;
+
+            } else if (currentTransactionType === 'transfer') {
+                const sourceAccount = formData.get('sourceAccount');
+                const destinationAccount = formData.get('destinationAccount');
+
+                if (!sourceAccount || !destinationAccount) {
+                    showMessage('請選擇轉出帳戶和轉入帳戶！', 'error');
+                    submitBtn.disabled = false;
+                    document.getElementById('submitButtonText').textContent = submitBtn.dataset.originalText;
+                    return;
+                }
+                
+                if (sourceAccount === destinationAccount) {
+                    showMessage('轉出帳戶和轉入帳戶不能相同！', 'error');
+                    submitBtn.disabled = false;
+                    document.getElementById('submitButtonText').textContent = submitBtn.dataset.originalText;
+                    return;
+                }
+
+                // 轉出 (計為負值)
+                transactionsToSave.push({
+                    type: 'transfer_out', 
+                    amount: -baseAmount, 
+                    currency: currencyCode,
+                    account: sourceAccount,
+                    timestamp: timestamp,
+                    category: '轉帳', 
+                    description: description,
+                    isPending: false, 
+                    relatedAccount: destinationAccount 
+                });
+
+                // 轉入 (計為正值)
+                transactionsToSave.push({
+                    type: 'transfer_in', 
+                    amount: baseAmount, 
+                    currency: currencyCode,
+                    account: destinationAccount,
+                    timestamp: timestamp,
+                    category: '轉帳', 
+                    description: description,
+                    isPending: false, 
+                    relatedAccount: sourceAccount 
+                });
+                
+                successMessage = `資料傳輸中: 轉帳 ${formatCurrencyDisplay(baseAmount, currencyCode)}`;
+            }
+
+            // 顯示綜合訊息 (資料傳輸中)
+            showMessage(successMessage, 'success');
+            
+            // 定義成功後清空表單的邏輯
+            const resetFormAndState = () => {
+                form.reset();
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                document.getElementById('timestamp').value = now.toISOString().slice(0, 16);
+                resetCurrencySelect();
+                setPendingStatus(false);
+                setTransactionType(currentTransactionType); // 刷新表單狀態
+            };
+
+            // *** 核心 API 儲存邏輯 (使用 Fetch API) ***
+            saveTransactionToSheet(transactionsToSave, resetFormAndState);
+        });
+
+        // 📢 新增：從 Apps Script 讀取所有交易資料
+        /**
+         * 從 Apps Script 讀取所有交易資料
+         * @returns {Array} 交易資料陣列
+         */
+        async function fetchTransactions() {
+            if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
+                console.error('請設置正確的 APPS_SCRIPT_URL!');
+                return [];
+            }
+            
+            // 呼叫 Apps Script 的 doGet 服務，加上 action=read 參數
+            const readUrl = `${APPS_SCRIPT_URL}?action=read`;
+            
+            // 顯示載入狀態
+            const summaryTitleElement = document.getElementById('summaryView').querySelector('h2');
+            const originalTitle = summaryTitleElement.textContent;
+            summaryTitleElement.textContent = '載入中... 請稍候 ⏳';
+
+            try {
+                const response = await fetch(readUrl, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP 錯誤! 狀態碼: ${response.status}`);
+                }
+                
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    // 成功載入後，更新標題
+                    summaryTitleElement.textContent = originalTitle; 
+                    // 返回從 Google Sheet 讀取的交易資料
+                    return data.data; 
+                } else {
+                    showMessage(`❌ 載入錯誤: ${data.message}`, 'error');
+                    summaryTitleElement.textContent = '載入失敗 ❌';
+                    return [];
+                }
+                
+            } catch (error) {
+                showMessage(`❌ 連線或讀取失敗: ${error.message}`, 'error');
+                summaryTitleElement.textContent = '載入失敗 ❌';
+                return [];
+            }
+        }
+        
+        // 📢 新增：載入後端數據並渲染摘要頁面
+        /**
+         * 載入後端數據並渲染摘要頁面
+         */
+        async function loadAndRenderSummary() {
+            // 確保只在 summary 頁面執行
+            if (currentTab !== 'summary') return;
+            
+            // 呼叫新增的讀取函式，將結果存入全局的 allTransactionsData 變數
+            const transactions = await fetchTransactions();
+            allTransactionsData = transactions; 
+            
+            // 渲染摘要頁面
+            renderSummary(); 
+        }
+
+        // ============== 2. 摘要分析邏輯 (已修改資料源) ==============
+
+        function setSummaryView(view) {
+            summaryViewType = view;
+            
+            const monthBtn = document.getElementById('viewToggleMonth');
+            const yearBtn = document.getElementById('viewToggleYear');
+            
+            const activeClass = 'bg-blue-500 text-white shadow-md'; 
+            const inactiveClass = 'text-gray-600 bg-gray-50';
+
+            monthBtn.classList.remove(...activeClass.split(' '), ...inactiveClass.split(' '));
+            yearBtn.classList.remove(...activeClass.split(' '), ...inactiveClass.split(' '));
+
+            if (view === 'month') {
+                monthBtn.classList.add(...activeClass.split(' '));
+                yearBtn.classList.add(...inactiveClass.split(' '));
+            } else {
+                yearBtn.classList.add(...activeClass.split(' '));
+                monthBtn.classList.add(...inactiveClass.split(' '));
+            }
+            // 📢 使用已載入的全局數據進行渲染
+            renderSummary(); 
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        }
+
+        function renderSummary() {
+            // 📢 使用全局變數 allTransactionsData 作為數據源
+            const transactions = allTransactionsData; 
+            
+            // 如果沒有數據，快速退出並提示
+            if (!transactions || transactions.length === 0) {
+                document.getElementById('totalIncomeTWD').textContent = '0';
+                document.getElementById('totalExpenseTWD').textContent = '0';
+                document.getElementById('netFlowTWD').textContent = 'TWD 0';
+                document.getElementById('categorySummaryList').innerHTML = '<li class="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">此期間無實扣 TWD 支出紀錄</li>';
+                document.getElementById('accountSummaryList').innerHTML = '<li class="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">此期間無帳戶資金流動紀錄</li>';
+                document.getElementById('transactionDetailList').innerHTML = '<li class="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">此期間無實扣交易明細紀錄</li>';
+                return;
+            }
+
+            // 獲取當前日期作為基準點 (用於篩選月/年)
+            const now = new Date(); 
+            const currentYear = now.getFullYear().toString();
+
+            // 格式化當前月份為 YYYY-MM
+            const currentMonthPeriod = currentYear + '-' + (now.getMonth() + 1).toString().padStart(2, '0');
+            
+            // 決定當前篩選的期間值
+            const currentPeriod = summaryViewType === 'month' ? currentMonthPeriod : currentYear;
+
+            // 1. 過濾並計算當前期間的交易 (只計算已結算/非預授權)
+            const filteredData = transactions.filter(t => {
+                // 排除預授權的支出
+                if (t.type === 'expense' && t.isPending) return false; 
+                
+                // 📢 注意：Apps Script 返回的 timestamp 可能是字串，需要轉換為 Date 物件
+                const date = new Date(t.timestamp);
+                
+                let transactionPeriod;
+                if (summaryViewType === 'month') {
+                    // 交易的月份期間 YYYY-MM
+                    transactionPeriod = date.getFullYear() + '-' + (date.getMonth() + 1).toString().padStart(2, '0');
+                } else {
+                    // 交易的年份期間 YYYY
+                    transactionPeriod = date.getFullYear().toString();
+                }
+
+                // 只包含在當前選擇期間內的交易
+                return transactionPeriod === currentPeriod;
+            });
+
+            // 2. 計算總收入、總支出和淨額 (僅 TWD)
+            let totalIncomeTWD = 0;
+            let totalExpenseTWD = 0;
+            let twdNetFlow = 0;
+
+            const categoryTotals = {}; // 僅用於 TWD 支出/轉出分析
+            const accountFlows = {}; // 帳戶淨額
+
+            filteredData.forEach(t => {
+                // 更新帳戶淨額
+                // 注意：這裡應該處理多幣別情況，但為了簡單，先不換算，只累加
+                accountFlows[t.account] = (accountFlows[t.account] || 0) + t.amount;
+                
+                // 僅計算 TWD 進行總計
+                if (t.currency === 'TWD') {
+                    // 收入和轉入 (正值)
+                    if (t.type === 'income' || t.type === 'transfer_in') {
+                        totalIncomeTWD += t.amount;
+                        twdNetFlow += t.amount;
+                    } 
+                    // 支出和轉出 (負值)
+                    else if (t.type === 'expense' || t.type === 'transfer_out') {
+                        // 由於轉出和支出都以負數存儲, amount 是負值
+                        totalExpenseTWD += Math.abs(t.amount); // 總支出是正數
+                        twdNetFlow += t.amount; // 淨額計算用負值
+                        
+                        // 類別分析：只分析支出的類別
+                        if (t.type === 'expense') {
+                             categoryTotals[t.category] = (categoryTotals[t.category] || 0) + Math.abs(t.amount);
+                        }
+                    }
+                }
+            });
+
+            // 3. 渲染總結卡片
+            document.getElementById('totalIncomeTWD').textContent = totalIncomeTWD.toLocaleString('zh-TW');
+            document.getElementById('totalExpenseTWD').textContent = totalExpenseTWD.toLocaleString('zh-TW');
+            
+            const netFlowElement = document.getElementById('netFlowTWD');
+            netFlowElement.textContent = formatCurrencyDisplay(twdNetFlow, 'TWD', twdNetFlow < 0);
+            netFlowElement.classList.remove('text-green-600', 'text-red-600');
+            netFlowElement.classList.add(twdNetFlow >= 0 ? 'text-green-600' : 'text-red-600');
+            
+            document.getElementById('summaryPeriodText').textContent = 
+                summaryViewType === 'month' ? 
+                `${now.getFullYear()}年${now.getMonth() + 1}月 總結` : 
+                `${now.getFullYear()}年度 總結`;
+
+
+            // 4. 渲染類別列表 (僅顯示支出類別)
+            const catList = document.getElementById('categorySummaryList');
+            catList.innerHTML = '';
+            const sortedCategories = Object.entries(categoryTotals).sort(([, a], [, b]) => b - a);
+            
+            if (sortedCategories.length === 0 && totalExpenseTWD === 0) {
+                 catList.innerHTML = '<li class="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">此期間無實扣 TWD 支出紀錄</li>';
+            } else {
+                sortedCategories.forEach(([category, amount]) => {
+                    const percentage = totalExpenseTWD > 0 ? ((amount / totalExpenseTWD) * 100).toFixed(1) : 0;
+                    const li = `
+                        <li class="flex justify-between items-center text-gray-800 border-b border-gray-50 last:border-b-0 py-1">
+                            <span class="font-medium text-blue-600">${category}</span>
+                            <div class="text-right">
+                                <span class="font-semibold text-sm">${formatCurrencyDisplay(amount, 'TWD')}</span>
+                                <span class="text-xs text-gray-500 ml-2">${percentage}%</span>
+                            </div>
+                        </li>
+                    `;
+                    catList.insertAdjacentHTML('beforeend', li);
+                });
+            }
+
+            // 5. 渲染帳戶列表 (顯示淨額)
+            const accList = document.getElementById('accountSummaryList');
+            accList.innerHTML = '';
+            const sortedAccounts = Object.entries(accountFlows).sort(([, a], [, b]) => b - a);
+            
+            if (sortedAccounts.length === 0) {
+                accList.innerHTML = '<li class="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">此期間無帳戶資金流動紀錄</li>';
+            } else {
+                sortedAccounts.forEach(([account, amount]) => {
+                    // 為了 UI 演示，我們從 filteredData 找到該帳戶最近一次使用的貨幣
+                    const currency = filteredData.find(t => t.account === account)?.currency || 'TWD';
+                    const isPositive = amount >= 0;
+                    const colorClass = isPositive ? 'text-green-700' : 'text-red-700';
+                    const icon = isPositive ? 'trending-up' : 'trending-down';
+                    
+                    const li = `
+                        <li class="p-3 bg-gray-50 rounded-lg flex justify-between items-center text-sm shadow-sm">
+                            <div class="flex flex-col flex-1 truncate">
+                                <div class="flex items-center space-x-2 font-semibold text-gray-800 truncate">
+                                    <i data-lucide="${icon}" class="w-4 h-4 ${colorClass}"></i>
+                                    <span class="truncate">${account}</span>
+                                </div>
+                            </div>
+                            <div class="font-bold whitespace-nowrap ${colorClass} text-base">
+                                ${formatCurrencyDisplay(amount, currency, amount < 0)}
+                            </div>
+                        </li>
+                    `;
+                    accList.insertAdjacentHTML('beforeend', li);
+                });
+            }
+
+            // 6. 渲染交易明細清單 (Transaction Details)
+            const detailList = document.getElementById('transactionDetailList');
+            detailList.innerHTML = '';
+
+            if (filteredData.length === 0) {
+                detailList.innerHTML = '<li class="text-center py-4 text-gray-500 bg-gray-50 rounded-lg">此期間無實扣交易明細紀錄</li>';
+            } else {
+                // 按日期降序排列
+                const sortedDetails = filteredData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                sortedDetails.forEach(t => {
+                    const isExpense = t.amount < 0;
+                    const colorClass = isExpense ? 'text-red-600' : 'text-green-600';
+                    const sign = isExpense ? '' : '+'; // + for income/transfer_in
+                    const displayAmount = (sign + Math.abs(t.amount)).toLocaleString('zh-TW');
+                    
+                    // 格式化日期時間為 MM/DD HH:MM
+                    const date = new Date(t.timestamp);
+                    const displayTime = date.toLocaleDateString('zh-TW', {
+                        month: '2-digit',
+                        day: '2-digit',
+                    }) + ' ' + date.toLocaleTimeString('zh-TW', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                    
+                    // 決定類型和圖標
+                    let typeLabel = '';
+                    let typeIcon = '';
+                    switch (t.type) {
+                        case 'expense':
+                            typeLabel = '支出';
+                            typeIcon = 'minus';
+                            break;
+                        case 'income':
+                            typeLabel = '收入';
+                            typeIcon = 'plus';
+                            break;
+                        case 'transfer_out':
+                            typeLabel = '轉出';
+                            typeIcon = 'arrow-up-right';
+                            break;
+                        case 'transfer_in':
+                            typeLabel = '轉入';
+                            typeIcon = 'arrow-down-left';
+                            break;
+                    }
+
+                    const li = `
+                        <li class="p-3 bg-gray-50 rounded-lg flex justify-between items-center text-sm shadow-sm">
+                            <div class="flex flex-col flex-1 truncate">
+                                <div class="flex items-center space-x-2 font-semibold text-gray-800 truncate">
+                                    <i data-lucide="${typeIcon}" class="w-4 h-4 ${colorClass}"></i>
+                                    <span class="truncate">${t.category} - ${t.description || typeLabel}</span>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-0.5 ml-6 truncate">
+                                    ${t.account} (${displayTime})
+                                </div>
+                            </div>
+                            <div class="font-bold whitespace-nowrap ${colorClass} text-base">
+                                ${t.currency} ${displayAmount}
+                            </div>
+                        </li>
+                    `;
+                    detailList.insertAdjacentHTML('beforeend', li);
+                });
+            }
+
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            // 設置 timestamp 預設值為當前時間
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('timestamp').value = now.toISOString().slice(0, 16);
+            
+            // 確保所有狀態初始化
+            switchTab('input'); 
+            setTransactionType('expense'); // 確保類別被填充
+            setPendingStatus(false); 
+            setSummaryView('month');
+            resetCurrencySelect(); 
+        });
+    </script>
+</body>
+</html>

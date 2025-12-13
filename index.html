@@ -145,7 +145,16 @@
                         </div>
                         
                         <div class="w-2/3">
-                            <input type="number" id="amount" name="amount" required class="input-field text-lg font-bold text-pink-700" placeholder="0.00">
+                            <input 
+                                type="number" 
+                                id="amount" 
+                                name="amount" 
+                                required 
+                                class="input-field text-lg font-bold text-pink-700" 
+                                placeholder="0.00"
+                                
+                                inputmode="decimal"
+                            >
                         </div>
                     </div>
                 </div>
@@ -157,6 +166,7 @@
                     </label>
                     <select id="account" name="account" class="input-field appearance-none">
                         <option value="">請選擇</option>
+                        <option value="信用卡 - 玉山">信用卡 - 玉山</option>
                         <option value="現金 - 台幣">現金 - 台幣</option>
                         <option value="活存 - 中信台幣">活存 - 中信台幣</option>
                         <option value="活存 - Richart">活存 - Richart</option>
@@ -164,12 +174,10 @@
                         <option value="玉山共帳 63467">玉山共帳 63467</option>
                         <option value="活存 - 永豐金">活存 - 永豐金</option>
                         <option value="活存 - 富邦">活存 - 富邦</option>
-                        <option value="信用卡 - 玉山">信用卡 - 玉山</option>
                         <option value="信用卡 - Richart">信用卡 - Richart</option>
                         <option value="信用卡 - 富邦">信用卡 - 富邦</option>
                         <option value="悠遊卡 - Richart">悠遊卡 - Richart</option>
                         <option value="悠遊卡 - 蛋黃哥">悠遊卡 - 蛋黃哥</option>
-                        <option value="信用卡-玉山">信用卡 - 玉山</option>
                     </select>
                 </div>
                 
@@ -181,6 +189,7 @@
                         </label>
                         <select id="sourceAccount" name="sourceAccount" class="input-field appearance-none">
                             <option value="">請選擇</option>
+                            <option value="現金 - 台幣">現金 - 台幣</option>
                             <option value="活存 - 中信台幣">活存 - 中信台幣</option>
                             <option value="活存 - Richart">活存 - Richart</option>
                             <option value="活存 - 玉山台幣">活存 - 玉山台幣</option>
@@ -199,6 +208,7 @@
                         </label>
                         <select id="destinationAccount" name="destinationAccount" class="input-field appearance-none">
                             <option value="">請選擇</option>
+                            <option value="現金 - 台幣">現金 - 台幣</option>
                             <option value="活存 - 中信台幣">活存 - 中信台幣</option>
                             <option value="活存 - Richart">活存 - Richart</option>
                             <option value="活存 - 玉山台幣">活存 - 玉山台幣</option>
